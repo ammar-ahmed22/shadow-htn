@@ -21,10 +21,18 @@ export function TopBar() {
   const router = useRouter()
 
   useEffect(() => {
-    // Get selected repo from localStorage (mock)
+    // Get selected repo from localStorage and normalize format
     const repo = localStorage.getItem("selectedRepo")
     if (repo) {
-      setSelectedRepo(JSON.parse(repo))
+      const parsed = JSON.parse(repo)
+      // Convert new Repository format to legacy format for compatibility
+      setSelectedRepo({
+        ...parsed,
+        // Map new format to legacy format
+        org: parsed.owner?.login || parsed.org,
+        fullName: parsed.full_name || parsed.fullName,
+        avatar: parsed.owner?.avatar_url || parsed.avatar,
+      })
     }
   }, [])
 
@@ -45,7 +53,7 @@ export function TopBar() {
           <Button variant="outline" className="gap-2 shadow-focus bg-transparent" onClick={handleRepoSelect}>
             <Avatar className="w-4 h-4">
               <AvatarImage src={selectedRepo.avatar || "/placeholder.svg"} />
-              <AvatarFallback>{selectedRepo.org[0]}</AvatarFallback>
+              <AvatarFallback>{selectedRepo.org?.[0] || 'R'}</AvatarFallback>
             </Avatar>
             <span className="font-medium">{selectedRepo.fullName}</span>
             <Badge variant="secondary" className="text-xs">
@@ -74,7 +82,7 @@ export function TopBar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="shadow-focus">
               <Avatar className="w-8 h-8">
-                <AvatarImage src={user?.avatar_url || "/placeholder.svg?height=32&width=32"} />
+                <AvatarImage src={user?.image || "/placeholder.svg?height=32&width=32"} />
                 <AvatarFallback>{user?.name?.[0] || user?.login?.[0] || "U"}</AvatarFallback>
               </Avatar>
             </Button>
