@@ -16,8 +16,13 @@ export function RepoHeader() {
     const repo = localStorage.getItem("selectedRepo")
     if (repo) {
       const parsed = JSON.parse(repo)
+      // Convert new Repository format to legacy format for compatibility
       setSelectedRepo({
         ...parsed,
+        // Map new format to legacy format
+        org: parsed.owner?.login || parsed.org,
+        fullName: parsed.full_name || parsed.fullName,
+        avatar: parsed.owner?.avatar_url || parsed.avatar,
         branch: "main",
         lastCommit: lastCommit,
       })
@@ -38,7 +43,7 @@ export function RepoHeader() {
       <div className="flex items-center gap-3">
         <Avatar className="w-6 h-6">
           <AvatarImage src={selectedRepo.avatar || "/placeholder.svg"} />
-          <AvatarFallback>{selectedRepo.org[0]}</AvatarFallback>
+          <AvatarFallback>{selectedRepo.org?.[0] || 'R'}</AvatarFallback>
         </Avatar>
         <div className="flex items-center gap-2">
           <span className="font-medium">{selectedRepo.fullName}</span>

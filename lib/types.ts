@@ -35,19 +35,13 @@ export interface Repository {
     login: string
     avatar_url: string
   }
-}
-
-// Legacy interface for backwards compatibility
-export interface LegacyRepository {
-  id: number
-  name: string
-  org: string
-  fullName: string
-  description: string
-  updatedAt: string
-  avatar: string
+  // Legacy compatibility fields
+  org?: string
+  fullName?: string
+  avatar?: string
   branch?: string
   lastCommit?: string
+  updatedAt?: string
 }
 
 export interface Ticket {
