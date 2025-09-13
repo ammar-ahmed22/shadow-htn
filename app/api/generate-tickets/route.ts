@@ -22,40 +22,45 @@ export async function POST(request: NextRequest) {
     }
 
     // Create system prompt for ticket generation
-    const systemPrompt = `You are Shadow, an AI development assistant that helps with code migration and development tasks. You should respond conversationally and create detailed, context-aware project tickets.
+    const systemPrompt = `You are Shadow, an AI development assistant that helps break down development tasks into actionable tickets.
 
 Repository Info: ${repositoryInfo ? JSON.stringify(repositoryInfo) : 'Not provided'}
 
-First, analyze the user's request to determine:
-1. Complexity level (simple, moderate, complex)
-2. Project scope (small feature, medium project, large refactor)
-3. Required expertise level
-4. Estimated timeline
+Analyze the user's development request and create a list of actionable tickets. Consider:
+1. Task complexity and scope
+2. Logical development sequence
+3. Dependencies between tasks
+4. Realistic time estimates
 
-Then respond with a JSON object containing:
-- response: A conversational response acknowledging the request and explaining your approach (e.g., "I'll help you create a Python calculator app! This is a great beginner project that we can build step by step...")
-- complexity: "simple", "moderate", or "complex" 
-- estimatedDuration: Overall project timeline (e.g., "2-3 days", "1-2 weeks")
-- summary: Brief technical overview of the plan
-- stages: Array of relevant stage names for this project
-- tickets: Array of detailed, context-specific ticket objects
-
-For tickets, adapt detail level based on complexity:
-- Simple projects: 3-5 high-level tickets with basic descriptions
-- Moderate projects: 5-8 tickets with moderate detail and some sub-tasks
-- Complex projects: 8-15+ detailed tickets with comprehensive descriptions, dependencies, and technical specifications
-
-Each ticket should include:
-- id: Unique ID (format: T-XXXX where XXXX is random 4-digit number)
-- title: Clear, specific title related to the actual request
-- description: Detailed description that directly addresses the user's needs
-- estimate: Realistic time estimate based on complexity
-- stage: Appropriate stage for this type of work
-- dependencies: Array of ticket IDs this depends on
-- priority: Based on logical development order
+Return a JSON array of ticket objects. Each ticket should have:
+- title: Clear, actionable title
+- description: Detailed description of what needs to be done
+- estimate: Time estimate (e.g., "2h", "1d", "3d")
+- priority: "high", "medium", or "low"
 - tags: Array of relevant technology/feature tags
+- stage: One of ["todo", "in_progress", "review", "done"] - start all as "todo"
 
-Make tickets highly relevant to the specific request. For a calculator app, include tickets about UI design, calculation logic, error handling, etc. For a codebase refactor, include analysis, migration planning, testing, etc.`
+Create 4-8 tickets that comprehensively cover the development task. Make them specific to the user's request.
+
+Example for "migrate from TypeScript to Next.js":
+[
+  {
+    "title": "Audit current TypeScript codebase",
+    "description": "Review existing TypeScript files, dependencies, and project structure to understand migration scope",
+    "estimate": "4h",
+    "priority": "high",
+    "tags": ["audit", "typescript", "planning"],
+    "stage": "todo"
+  },
+  {
+    "title": "Set up Next.js project structure",
+    "description": "Initialize new Next.js project, configure TypeScript support, and set up basic routing",
+    "estimate": "1d",
+    "priority": "high", 
+    "tags": ["nextjs", "setup", "configuration"],
+    "stage": "todo"
+  }
+]`
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -64,7 +69,7 @@ Make tickets highly relevant to the specific request. For a calculator app, incl
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages: [
           {
             role: 'system',
@@ -75,13 +80,17 @@ Make tickets highly relevant to the specific request. For a calculator app, incl
             content: prompt
           }
         ],
-        temperature: 0.3,
+        temperature: 0.7,
         max_tokens: 4096,
+        top_p: 1,
+        stream: false
       }),
     })
 
     if (!response.ok) {
-      throw new Error(`Groq API error: ${response.status}`)
+      const errorBody = await response.text()
+      console.error(`Groq API error: ${response.status}`, errorBody)
+      throw new Error(`Groq API error: ${response.status} - ${errorBody}`)
     }
 
     const data = await response.json()
@@ -91,72 +100,87 @@ Make tickets highly relevant to the specific request. For a calculator app, incl
       throw new Error('No response from Groq API')
     }
 
-    // Try to parse the JSON response
-    let planData
+    // Try to parse the JSON response as ticket array
+    let tickets
     try {
       // Extract JSON from the response if it's wrapped in markdown or other text
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
+      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/)
       const jsonString = jsonMatch ? jsonMatch[0] : aiResponse
-      planData = JSON.parse(jsonString)
+      tickets = JSON.parse(jsonString)
+      
+      // Transform tickets to match our Ticket interface
+      tickets = tickets.map((ticket: any, index: number) => ({
+        id: `T-${Math.floor(Math.random() * 9000) + 1000}`,
+        title: ticket.title,
+        description: ticket.description,
+        stage: "Discovery", // We'll distribute these across stages
+        status: "todo" as const,
+        assignee: "Shadow",
+        repo: repositoryInfo?.full_name || repositoryInfo?.name || "current-repo",
+        updatedAt: "just now",
+        estimate: ticket.estimate,
+        priority: ticket.priority,
+        tags: ticket.tags || [],
+        deps: [],
+        progress: {
+          testsPassed: 0,
+          testsTotal: 0,
+          typeErrors: 0,
+        }
+      }))
+      
+      // Distribute tickets across stages
+      const stages = ["Discovery", "Implementation", "Testing", "Review"]
+      tickets = tickets.map((ticket: any, index: number) => ({
+        ...ticket,
+        stage: stages[index % stages.length]
+      }))
+      
     } catch (parseError) {
       console.error('Failed to parse Groq response:', parseError)
       console.log('Raw AI response:', aiResponse)
       
-      // Create a more intelligent fallback based on the prompt
-      const isSimpleTask = prompt.toLowerCase().includes('calculator') || 
-                          prompt.toLowerCase().includes('simple') ||
-                          prompt.toLowerCase().includes('basic')
-      
-      planData = {
-        response: `I'll help you with "${prompt}". Let me break this down into manageable tasks.`,
-        complexity: isSimpleTask ? "simple" : "moderate",
-        estimatedDuration: isSimpleTask ? "1-2 days" : "3-5 days",
-        summary: `Implementation plan for: ${prompt}`,
-        stages: ["Planning", "Development", "Testing", "Deployment"],
-        tickets: [
-          {
-            id: `T-${Math.floor(Math.random() * 9000) + 1000}`,
-            title: "Project setup and requirements analysis",
-            description: `Analyze requirements and set up project structure for: ${prompt}`,
-            estimate: "0.5d",
-            stage: "Planning",
-            dependencies: [],
-            priority: "high",
-            tags: ["setup", "analysis"]
-          },
-          {
-            id: `T-${Math.floor(Math.random() * 9000) + 1000}`,
-            title: "Core functionality implementation",
-            description: `Implement the main features and logic for: ${prompt}`,
-            estimate: isSimpleTask ? "1d" : "2d",
-            stage: "Development",
-            dependencies: [],
-            priority: "high",
-            tags: ["development", "core"]
-          },
-          {
-            id: `T-${Math.floor(Math.random() * 9000) + 1000}`,
-            title: "Testing and validation",
-            description: "Write tests and validate functionality works as expected",
-            estimate: "0.5d",
-            stage: "Testing",
-            dependencies: [],
-            priority: "medium",
-            tags: ["testing", "validation"]
-          }
-        ]
-      }
+      // Create fallback tickets
+      tickets = [
+        {
+          id: `T-${Math.floor(Math.random() * 9000) + 1000}`,
+          title: "Analyze requirements",
+          description: `Break down the requirements for: ${prompt}`,
+          stage: "Discovery",
+          status: "todo" as const,
+          assignee: "Shadow",
+          repo: repositoryInfo?.full_name || repositoryInfo?.name || "current-repo",
+          updatedAt: "just now",
+          estimate: "2h",
+          priority: "high",
+          tags: ["analysis"],
+          deps: [],
+          progress: { testsPassed: 0, testsTotal: 0, typeErrors: 0 }
+        },
+        {
+          id: `T-${Math.floor(Math.random() * 9000) + 1000}`,
+          title: "Implement core functionality",
+          description: `Develop the main features for: ${prompt}`,
+          stage: "Implementation", 
+          status: "todo" as const,
+          assignee: "Shadow",
+          repo: repositoryInfo?.full_name || repositoryInfo?.name || "current-repo",
+          updatedAt: "just now",
+          estimate: "1d",
+          priority: "high",
+          tags: ["development"],
+          deps: [],
+          progress: { testsPassed: 0, testsTotal: 0, typeErrors: 0 }
+        }
+      ]
     }
 
-    // Ensure the plan has required fields
+    // Create plan object with tickets
     const plan = {
       id: `plan-${Date.now()}`,
-      response: planData.response || `I'll help you with "${prompt}". Let me create a plan for this.`,
-      complexity: planData.complexity || "moderate",
-      estimatedDuration: planData.estimatedDuration || "3-5 days",
-      summary: planData.summary || `Implementation plan for: ${prompt}`,
-      stages: planData.stages || ["Planning", "Development", "Testing", "Deployment"],
-      tickets: planData.tickets || [],
+      summary: `Development plan for: ${prompt}`,
+      stages: ["Discovery", "Implementation", "Testing", "Review"],
+      tickets: tickets,
       createdAt: new Date().toISOString(),
     }
 

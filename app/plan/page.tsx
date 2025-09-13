@@ -77,7 +77,7 @@ export default function PlanPage() {
       return {
         id: `plan-${Date.now()}`,
         summary: `Shadow will help you ${userPrompt.toLowerCase()} through a structured approach.`,
-        stages: ["Discovery", "Implementation", "Testing", "Review"],
+        stages: ["Discovery", "Development", "Testing", "Production"],
         tickets: [
           {
             id: `T-${Date.now()}`,
@@ -93,7 +93,7 @@ export default function PlanPage() {
           {
             id: `T-${Date.now() + 1}`,
             title: "Core implementation",
-            stage: "Implementation", 
+            stage: "Development", 
             status: "todo" as const,
             assignee: "Shadow",
             repo: "current-repo",
@@ -139,7 +139,7 @@ export default function PlanPage() {
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         type: "assistant",
-        content: plan.response || `I'll help you ${content.toLowerCase()}. Let me analyze your project and create a detailed plan.`,
+        content: `I've analyzed your request and created ${plan.tickets.length} actionable tickets for "${content}". These are now ready for implementation in your kanban board.`,
         plan,
         timestamp: new Date().toISOString(),
       }

@@ -50,7 +50,7 @@ export interface Repository {
 export interface Ticket {
   id: string
   title: string
-  stage: string
+  stage: "Discovery" | "Development" | "Testing" | "Production"
   status: "todo" | "in_progress" | "review" | "done"
   assignee: "Shadow" | string
   repo: string

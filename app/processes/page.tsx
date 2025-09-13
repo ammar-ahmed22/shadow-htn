@@ -48,7 +48,7 @@ export default function ProcessesPage() {
       const processTickets: Ticket[] = plan.tickets.map((planTicket: any, index: number) => ({
         id: planTicket.id,
         title: planTicket.title,
-        stage: planTicket.stage || plan.stages[Math.min(index, plan.stages.length - 1)],
+        stage: planTicket.stage || ["Discovery", "Development", "Testing", "Production"][Math.min(index, 3)] as Ticket['stage'],
         status: "todo" as const, // All tickets start as todo
         assignee: "Shadow",
         repo: repoName,
