@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Github, LogOut, Settings, CreditCard, Moon, CheckCircle2, XCircle, ExternalLink, User } from "lucide-react"
+import { Github, LogOut, Settings, CreditCard, Moon, CheckCircle2, XCircle, ExternalLink, User, Trash2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 
@@ -43,9 +43,8 @@ export default function AccountPage() {
   }, [])
 
   const handleSignOut = async () => {
-    // Clear all local storage data
+    // Clear all localStorage data
     localStorage.removeItem("selectedRepo")
-    localStorage.removeItem("chatHistory")
     localStorage.removeItem("shadow_demo_mode")
     
     // Sign out from NextAuth
@@ -53,6 +52,15 @@ export default function AccountPage() {
     
     // Redirect to login
     router.push("/login")
+  }
+
+  const handleClearProcesses = () => {
+    // Clear all process tickets from localStorage
+    localStorage.removeItem("tickets")
+    localStorage.removeItem("currentPlan")
+    
+    // Show confirmation
+    alert("All process tickets have been cleared successfully!")
   }
 
   const handleDisconnectGitHub = async () => {
@@ -287,8 +295,12 @@ export default function AccountPage() {
           <CardTitle className="text-destructive">Danger Zone</CardTitle>
           <CardDescription>Irreversible actions that affect your account</CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button variant="destructive" onClick={handleSignOut} className="shadow-focus">
+        <CardContent className="space-y-3">
+          <Button variant="destructive" onClick={handleClearProcesses} className="shadow-focus w-full">
+            <Trash2 className="w-4 h-4 mr-2" />
+            Clear All Process Tickets
+          </Button>
+          <Button variant="destructive" onClick={handleSignOut} className="shadow-focus w-full">
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
           </Button>

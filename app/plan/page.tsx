@@ -1,13 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChatTabs } from "@/components/chat-tabs"
-import { useChatTabs } from "@/hooks/use-chat-tabs"
-import { AIResponseProcessor, type AIResponseData } from "@/lib/ai-response-processor"
+import { AIResponseProcessor } from "@/lib/ai-response-processor"
 import { RepoHeader } from "@/components/repo-header"
 import { ChatPanel } from "@/components/chat-panel"
 import type { ChatMessage, Plan } from "@/lib/types"
-import { mockPlan, suggestedPrompts } from "@/lib/mock-data"
+import { suggestedPrompts } from "@/lib/mock-data"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 
@@ -15,61 +13,12 @@ export default function PlanPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const { activeTabId, updateTabMessages, getActiveMessages } = useChatTabs()
-  const aiProcessor = new AIResponseProcessor()
   const { isAuthenticated } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  const processAIResponseData = async (aiResponseData: AIResponseData) => {
-    try {
-      setIsLoading(true)
-      
-      const selectedRepo = localStorage.getItem('selectedRepo')
-      let repoName = "current-project"
-      if (selectedRepo) {
-        const repo = JSON.parse(selectedRepo)
-        repoName = repo.full_name || repo.fullName || repoName
-      }
-
-      const result = await aiProcessor.processAndImport(aiResponseData, repoName)
-      
-      const assistantMessage: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        type: "assistant",
-        content: result.summary,
-        plan: {
-          id: `plan-${Date.now()}`,
-          summary: result.summary,
-          stages: ["Discovery", "Development", "Testing", "Production"],
-          tickets: result.tickets,
-          createdAt: new Date().toISOString(),
-        },
-        timestamp: new Date().toISOString(),
-      }
-
-      const currentMessages = getActiveMessages()
-      const updatedMessages = [...currentMessages, assistantMessage]
-      updateTabMessages(activeTabId, updatedMessages)
-      setMessages(updatedMessages)
-
-      localStorage.setItem('currentPlan', JSON.stringify(assistantMessage.plan))
-      
-      console.log('✅ AI Response processed successfully:', {
-        ticketsCreated: result.tickets.length,
-        complexity: result.analysis.complexity,
-        repository: repoName
-      })
-
-    } catch (error) {
-      console.error('❌ Error processing AI response:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   useEffect(() => {
     if (mounted && !isAuthenticated) {
@@ -96,82 +45,6 @@ export default function PlanPage() {
     setMessages(newMessages)
   }
 
-  const generatePlanWithGroq = async (userPrompt: string): Promise<Plan> => {
-    try {
-      // Get repository info if available
-      const selectedRepo = localStorage.getItem("selectedRepo")
-      let repositoryInfo = null
-      if (selectedRepo) {
-        repositoryInfo = JSON.parse(selectedRepo)
-      }
-
-      const response = await fetch('/api/generate-tickets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: userPrompt,
-          repositoryInfo
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to generate plan')
-      }
-
-      const plan = await response.json()
-      return plan
-    } catch (error) {
-      console.error('Error generating plan with Groq:', error)
-      
-      // Fallback to mock plan if API fails
-      return {
-        id: `plan-${Date.now()}`,
-        summary: `Shadow will help you ${userPrompt.toLowerCase()} through a structured approach.`,
-        stages: ["Discovery", "Development", "Testing", "Production"],
-        tickets: [
-          {
-            id: `T-${Date.now()}`,
-            title: "Initial analysis and setup",
-            stage: "Discovery",
-            status: "todo" as const,
-            assignee: "Shadow",
-            repo: "current-repo",
-            updatedAt: "just now",
-            estimate: "0.5d",
-            description: "Analyze requirements and set up project structure",
-          },
-          {
-            id: `T-${Date.now() + 1}`,
-            title: "Core implementation",
-            stage: "Development", 
-            status: "todo" as const,
-            assignee: "Shadow",
-            repo: "current-repo",
-            updatedAt: "just now",
-            estimate: "2d",
-            description: "Implement main functionality",
-            deps: [`T-${Date.now()}`],
-          },
-          {
-            id: `T-${Date.now() + 2}`,
-            title: "Testing and validation",
-            stage: "Testing",
-            status: "todo" as const,
-            assignee: "Shadow", 
-            repo: "current-repo",
-            updatedAt: "just now",
-            estimate: "1d",
-            description: "Test and validate implementation",
-            deps: [`T-${Date.now() + 1}`],
-          },
-        ],
-        createdAt: new Date().toISOString(),
-      }
-    }
-  }
-
   const handleSendMessage = async (content: string) => {
     const userMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -185,8 +58,28 @@ export default function PlanPage() {
     setIsLoading(true)
 
     try {
-      // Generate plan using Groq API
-      const plan = await generatePlanWithGroq(content)
+      // Generate tickets using Martian API only
+      const martianResponse = await fetch('/api/martian-tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: content, codeContext: '' }),
+      })
+      
+      if (!martianResponse.ok) {
+        throw new Error(`Martian API error: ${martianResponse.status}`)
+      }
+
+      const { aiResponseData } = await martianResponse.json()
+      const aiProcessor = new AIResponseProcessor()
+      const result = await aiProcessor.processAndImport(aiResponseData, "current-project")
+      
+      const plan: Plan = {
+        id: `plan-${Date.now()}`,
+        summary: result.summary,
+        stages: ["Discovery", "Development", "Testing", "Production"],
+        tickets: result.tickets,
+        createdAt: new Date().toISOString(),
+      }
       
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
@@ -202,9 +95,9 @@ export default function PlanPage() {
       // Store the plan for the processes page
       localStorage.setItem("currentPlan", JSON.stringify(plan))
       
-      setIsLoading(false)
     } catch (error) {
       console.error('Error in handleSendMessage:', error)
+    } finally {
       setIsLoading(false)
     }
   }
