@@ -1,23 +1,23 @@
-# Shadow 🌑
+# Shadow 
 
 **The Next-Generation AI Migration Platform**
 
 Shadow is an intelligent AI employee that automates complex migration processes, transforming how development teams handle technology stack transitions. From WordPress to Next.js, legacy systems to modern frameworks - Shadow handles the entire migration lifecycle with precision and efficiency.
 
-## 🚀 Overview
+## Overview
 
 Shadow revolutionizes software migration by combining AI-powered code generation with intelligent project management. It acts as your dedicated AI employee, working autonomously to plan, execute, and manage complex migration projects while keeping your development team in the loop through seamless collaboration workflows.
 
 ### Key Features
 
-- **🔐 Seamless OAuth Integration** - Connect via GitHub OAuth for instant repository access
-- **🤖 AI-Powered Migration Planning** - Intelligent analysis and ticket generation
-- **📋 Trello-Style Project Management** - Visual kanban boards with automated ticket progression  
-- **⚡ Groq-Powered Inference** - Lightning-fast AI code generation and analysis
-- **👥 Developer Collaboration** - Built-in PR review workflows and team notifications
-- **🔄 End-to-End Automation** - From planning to deployment, Shadow handles it all
+- ** Seamless OAuth Integration** - Connect via GitHub OAuth for instant repository access
+- ** AI-Powered Migration Planning** - Intelligent analysis and ticket generation
+- ** Trello-Style Project Management** - Visual kanban boards with automated ticket progression  
+- ** Groq-Powered Inference** - Lightning-fast AI code generation and analysis
+- ** Developer Collaboration** - Built-in PR review workflows and team notifications
+- ** End-to-End Automation** - From planning to deployment, Shadow handles it all
 
-## 🎯 How It Works
+## How It Works
 
 ### 1. **Connect & Sync**
 - Login with GitHub OAuth
@@ -49,7 +49,7 @@ Shadow automatically:
 - Shadow incorporates feedback and continues execution
 - Process continues until migration is complete
 
-## 🛠 Technology Stack
+## Technology Stack
 
 - **Frontend**: Next.js 14, React 18, TypeScript
 - **UI Components**: Radix UI, Tailwind CSS
@@ -58,7 +58,7 @@ Shadow automatically:
 - **Project Management**: Custom Kanban implementation
 - **Deployment**: Vercel-ready configuration
 
-## 🏗 Project Structure
+## Project Structure
 
 ```
 shadow-app/
@@ -80,7 +80,7 @@ shadow-app/
 └── styles/              # Global styles
 ```
 
-## 🚦 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -126,7 +126,7 @@ shadow-app/
 5. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-## 🔧 Configuration
+## Configuration
 
 ### Groq Integration
 
@@ -152,7 +152,7 @@ export const groqConfig = {
 2. Set Authorization callback URL to: `http://localhost:3000/api/auth/callback/github`
 3. Add your Client ID and Secret to environment variables
 
-## 📊 Migration Process Flow
+## Migration Process Flow
 
 ```mermaid
 graph TD
@@ -174,7 +174,7 @@ graph TD
     N -->|No| O[Migration Complete]
 ```
 
-## 🎨 UI Components
+## UI Components
 
 Shadow uses a modern, accessible design system built on:
 
@@ -189,21 +189,13 @@ Key components:
 - `PlanCard`: Migration plan visualization
 - `ProcessTracker`: Real-time progress monitoring
 
-## 🔒 Security & Best Practices
+## Security & Best Practices
 
 - **OAuth Security**: Secure GitHub integration with proper scopes
 - **API Key Management**: Environment-based configuration
 - **Code Review**: Mandatory PR reviews before merging
 - **Access Control**: Repository-level permissions
 - **Audit Trail**: Complete migration history tracking
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-
-1. **Connect your repository to Vercel**
-2. **Add environment variables** in Vercel dashboard
-3. **Deploy** - Vercel handles the rest!
 
 ### Manual Deployment
 
@@ -215,10 +207,6 @@ pnpm build
 pnpm start
 ```
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
 ### Development Workflow
 
 1. Fork the repository
@@ -227,7 +215,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 4. Add tests if applicable
 5. Submit a pull request
 
-## 📈 Roadmap
+## Roadmap
 
 - [ ] **Multi-language Support** - Python, Java, PHP migrations
 - [ ] **Custom Migration Templates** - Reusable migration patterns
@@ -235,24 +223,6 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - [ ] **Advanced Analytics** - Migration insights and reporting
 - [ ] **Plugin System** - Extensible migration capabilities
 - [ ] **Enterprise Features** - SSO, advanced security, compliance
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: [docs.shadow.dev](https://docs.shadow.dev)
-- **Issues**: [GitHub Issues](https://github.com/your-org/shadow/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/shadow/discussions)
-- **Email**: support@shadow.dev
-
-## 🙏 Acknowledgments
-
-- **Groq** - For providing lightning-fast AI inference
-- **Vercel** - For seamless deployment platform
-- **Radix UI** - For accessible component primitives
-- **The Open Source Community** - For the amazing tools and libraries
 
 ---
 

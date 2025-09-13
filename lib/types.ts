@@ -24,6 +24,23 @@ export interface ChatMessage {
 export interface Repository {
   id: number
   name: string
+  full_name: string
+  description: string | null
+  private: boolean
+  language: string | null
+  updated_at: string
+  stargazers_count: number
+  forks_count: number
+  owner: {
+    login: string
+    avatar_url: string
+  }
+}
+
+// Legacy interface for backwards compatibility
+export interface LegacyRepository {
+  id: number
+  name: string
   org: string
   fullName: string
   description: string

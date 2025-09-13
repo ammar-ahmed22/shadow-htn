@@ -1,64 +1,39 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { mockGitHubAuth, getStoredAuth, setStoredAuth, clearAuth, type AuthState } from "@/lib/auth"
+import { useSession, signIn, signOut } from "next-auth/react"
+import { useState } from "react"
 
 export function useAuth() {
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-    error: null,
-  })
-
-  useEffect(() => {
-    // Initialize auth state from localStorage
-    const stored = getStoredAuth()
-    setAuthState(stored)
-  }, [])
+  const { data: session, status } = useSession()
+  const [error, setError] = useState<string | null>(null)
 
   const login = async () => {
-    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
-
+    setError(null)
     try {
-      const user = await mockGitHubAuth()
-      setStoredAuth(user)
-      setAuthState({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      })
-      return user
+      await signIn('github', { callbackUrl: '/repo-picker' })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Authentication failed"
-      setAuthState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage,
-      }))
+      setError(errorMessage)
       throw error
     }
   }
 
-  const logout = () => {
-    clearAuth()
-    setAuthState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-    })
+  const logout = async () => {
+    await signOut({ callbackUrl: '/login' })
   }
 
   const clearError = () => {
-    setAuthState((prev) => ({ ...prev, error: null }))
+    setError(null)
   }
 
   return {
-    ...authState,
+    user: session?.user || null,
+    isAuthenticated: !!session,
+    isLoading: status === "loading",
+    error,
     login,
     logout,
     clearError,
+    accessToken: session?.accessToken
   }
 }
