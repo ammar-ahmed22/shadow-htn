@@ -53,8 +53,8 @@ export function SidebarNav() {
           {/* Logo */}
           <div className="p-4 border-b border-border">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-background font-bold text-sm">S</span>
+              <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
               </div>
               <span className="font-semibold md:hidden">Shadow</span>
             </div>

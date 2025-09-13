@@ -1,8 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChatPanel } from "@/components/chat-panel"
+import { ChatTabs } from "@/components/chat-tabs"
+import { useChatTabs } from "@/hooks/use-chat-tabs"
+import { AIResponseProcessor, type AIResponseData } from "@/lib/ai-response-processor"
 import { RepoHeader } from "@/components/repo-header"
+import { ChatPanel } from "@/components/chat-panel"
 import type { ChatMessage, Plan } from "@/lib/types"
 import { mockPlan, suggestedPrompts } from "@/lib/mock-data"
 import { useAuth } from "@/hooks/use-auth"
@@ -12,12 +15,61 @@ export default function PlanPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const { activeTabId, updateTabMessages, getActiveMessages } = useChatTabs()
+  const aiProcessor = new AIResponseProcessor()
   const { isAuthenticated } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const processAIResponseData = async (aiResponseData: AIResponseData) => {
+    try {
+      setIsLoading(true)
+      
+      const selectedRepo = localStorage.getItem('selectedRepo')
+      let repoName = "current-project"
+      if (selectedRepo) {
+        const repo = JSON.parse(selectedRepo)
+        repoName = repo.full_name || repo.fullName || repoName
+      }
+
+      const result = await aiProcessor.processAndImport(aiResponseData, repoName)
+      
+      const assistantMessage: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        type: "assistant",
+        content: result.summary,
+        plan: {
+          id: `plan-${Date.now()}`,
+          summary: result.summary,
+          stages: ["Discovery", "Development", "Testing", "Production"],
+          tickets: result.tickets,
+          createdAt: new Date().toISOString(),
+        },
+        timestamp: new Date().toISOString(),
+      }
+
+      const currentMessages = getActiveMessages()
+      const updatedMessages = [...currentMessages, assistantMessage]
+      updateTabMessages(activeTabId, updatedMessages)
+      setMessages(updatedMessages)
+
+      localStorage.setItem('currentPlan', JSON.stringify(assistantMessage.plan))
+      
+      console.log('✅ AI Response processed successfully:', {
+        ticketsCreated: result.tickets.length,
+        complexity: result.analysis.complexity,
+        repository: repoName
+      })
+
+    } catch (error) {
+      console.error('❌ Error processing AI response:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (mounted && !isAuthenticated) {

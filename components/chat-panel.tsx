@@ -64,7 +64,7 @@ export function ChatPanel({
         {messages.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">💭</span>
+              <img src="/logo.png" alt="Shadow Logo" className="w-10 h-10 object-contain" />
             </div>
             <h3 className="text-lg font-medium mb-2">What would you like Shadow to do?</h3>
             <p className="text-muted-foreground mb-6">
