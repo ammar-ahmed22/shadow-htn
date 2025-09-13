@@ -1,8 +1,11 @@
 export interface Plan {
   id: string
+  response?: string
+  complexity?: "simple" | "moderate" | "complex"
+  estimatedDuration?: string
   summary: string
   stages: string[]
-  tickets: PlanTicket[]
+  tickets: Ticket[]
   createdAt: string
 }
 
@@ -59,8 +62,12 @@ export interface Ticket {
     typeErrors?: number
   }
   deps?: string[]
+  dependencies?: string[]
   updatedAt: string
   description?: string
+  estimate?: string
+  priority?: "high" | "medium" | "low"
+  tags?: string[]
   activity?: ActivityItem[]
 }
 

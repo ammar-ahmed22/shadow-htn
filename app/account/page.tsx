@@ -42,13 +42,29 @@ export default function AccountPage() {
     }
   }, [])
 
-  const handleSignOut = () => {
-    logout()
+  const handleSignOut = async () => {
+    // Clear all local storage data
+    localStorage.removeItem("selectedRepo")
+    localStorage.removeItem("chatHistory")
+    localStorage.removeItem("shadow_demo_mode")
+    
+    // Sign out from NextAuth
+    await logout()
+    
+    // Redirect to login
     router.push("/login")
   }
 
-  const handleDisconnectGitHub = () => {
-    logout()
+  const handleDisconnectGitHub = async () => {
+    // Clear all local storage data
+    localStorage.removeItem("selectedRepo")
+    localStorage.removeItem("chatHistory")
+    localStorage.removeItem("shadow_demo_mode")
+    
+    // Sign out from NextAuth
+    await logout()
+    
+    // Redirect to login
     router.push("/login")
   }
 
@@ -87,7 +103,7 @@ export default function AccountPage() {
         <CardContent className="space-y-6">
           <div className="flex items-center gap-6">
             <Avatar className="w-20 h-20">
-              <AvatarImage src={user?.avatar_url || "/placeholder.svg?height=80&width=80"} />
+              <AvatarImage src={user?.image || "/placeholder.svg?height=80&width=80"} />
               <AvatarFallback className="text-2xl">{user?.name?.[0] || user?.login?.[0] || "U"}</AvatarFallback>
             </Avatar>
             <div className="space-y-2">

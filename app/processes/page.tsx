@@ -28,31 +28,45 @@ export default function ProcessesPage() {
   }, [isAuthenticated, mounted, router])
 
   useEffect(() => {
-    // Load tickets from localStorage or use mock data
+    // Load tickets from localStorage or convert from current plan
     const storedTickets = localStorage.getItem("processTickets")
     const currentPlan = localStorage.getItem("currentPlan")
+    const selectedRepo = localStorage.getItem("selectedRepo")
 
     if (storedTickets) {
       setTickets(JSON.parse(storedTickets))
     } else if (currentPlan) {
       // Convert plan tickets to process tickets
       const plan = JSON.parse(currentPlan)
+      let repoName = "unknown/repo"
+      
+      if (selectedRepo) {
+        const repo = JSON.parse(selectedRepo)
+        repoName = repo.full_name || repo.fullName || repoName
+      }
+
       const processTickets: Ticket[] = plan.tickets.map((planTicket: any, index: number) => ({
         id: planTicket.id,
         title: planTicket.title,
-        stage: plan.stages[Math.min(index, plan.stages.length - 1)],
-        status: index === 0 ? "in_progress" : "todo",
+        stage: planTicket.stage || plan.stages[Math.min(index, plan.stages.length - 1)],
+        status: "todo" as const, // All tickets start as todo
         assignee: "Shadow",
-        repo: "acme/web-app",
+        repo: repoName,
         updatedAt: "just now",
-        description: `Generated from plan: ${planTicket.title}`,
-        deps: planTicket.deps,
+        description: planTicket.description || `Generated from plan: ${planTicket.title}`,
+        deps: planTicket.dependencies || planTicket.deps || [],
+        progress: {
+          testsPassed: 0,
+          testsTotal: 0,
+          typeErrors: 0,
+        }
       }))
-      setTickets([...mockTickets, ...processTickets])
-      localStorage.setItem("processTickets", JSON.stringify([...mockTickets, ...processTickets]))
+      
+      setTickets(processTickets)
+      localStorage.setItem("processTickets", JSON.stringify(processTickets))
     } else {
-      setTickets(mockTickets)
-      localStorage.setItem("processTickets", JSON.stringify(mockTickets))
+      // No plan available, show empty state
+      setTickets([])
     }
   }, [])
 
@@ -73,6 +87,13 @@ export default function ProcessesPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold mb-2">Processes</h1>
         <p className="text-muted-foreground">Track and manage your development tickets</p>
+        {tickets.length === 0 && (
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              No tickets available. Create a plan in the <a href="/plan" className="text-primary hover:underline">Plan</a> section to generate tickets.
+            </p>
+          </div>
+        )}
       </div>
 
       <KanbanBoard tickets={tickets} onTicketUpdate={handleTicketUpdate} />

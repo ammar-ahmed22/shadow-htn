@@ -44,37 +44,79 @@ export default function PlanPage() {
     setMessages(newMessages)
   }
 
-  const generateMockPlan = (userPrompt: string): Plan => {
-    // Generate different plans based on prompt keywords
-    if (userPrompt.toLowerCase().includes("typescript") || userPrompt.toLowerCase().includes("ts")) {
-      return mockPlan
-    }
+  const generatePlanWithGroq = async (userPrompt: string): Promise<Plan> => {
+    try {
+      // Get repository info if available
+      const selectedRepo = localStorage.getItem("selectedRepo")
+      let repositoryInfo = null
+      if (selectedRepo) {
+        repositoryInfo = JSON.parse(selectedRepo)
+      }
 
-    // Default plan for other prompts
-    return {
-      id: `plan-${Date.now()}`,
-      summary: `Shadow will help you ${userPrompt.toLowerCase()} through a structured approach.`,
-      stages: ["Analyze", "Plan", "Execute", "Validate"],
-      tickets: [
-        {
-          id: "T-2001",
-          title: "Initial analysis and setup",
-          estimate: "0.5d",
+      const response = await fetch('/api/generate-tickets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          id: "T-2002",
-          title: "Core implementation",
-          estimate: "2d",
-          deps: ["T-2001"],
-        },
-        {
-          id: "T-2003",
-          title: "Testing and validation",
-          estimate: "1d",
-          deps: ["T-2002"],
-        },
-      ],
-      createdAt: new Date().toISOString(),
+        body: JSON.stringify({
+          prompt: userPrompt,
+          repositoryInfo
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate plan')
+      }
+
+      const plan = await response.json()
+      return plan
+    } catch (error) {
+      console.error('Error generating plan with Groq:', error)
+      
+      // Fallback to mock plan if API fails
+      return {
+        id: `plan-${Date.now()}`,
+        summary: `Shadow will help you ${userPrompt.toLowerCase()} through a structured approach.`,
+        stages: ["Discovery", "Implementation", "Testing", "Review"],
+        tickets: [
+          {
+            id: `T-${Date.now()}`,
+            title: "Initial analysis and setup",
+            stage: "Discovery",
+            status: "todo" as const,
+            assignee: "Shadow",
+            repo: "current-repo",
+            updatedAt: "just now",
+            estimate: "0.5d",
+            description: "Analyze requirements and set up project structure",
+          },
+          {
+            id: `T-${Date.now() + 1}`,
+            title: "Core implementation",
+            stage: "Implementation", 
+            status: "todo" as const,
+            assignee: "Shadow",
+            repo: "current-repo",
+            updatedAt: "just now",
+            estimate: "2d",
+            description: "Implement main functionality",
+            deps: [`T-${Date.now()}`],
+          },
+          {
+            id: `T-${Date.now() + 2}`,
+            title: "Testing and validation",
+            stage: "Testing",
+            status: "todo" as const,
+            assignee: "Shadow", 
+            repo: "current-repo",
+            updatedAt: "just now",
+            estimate: "1d",
+            description: "Test and validate implementation",
+            deps: [`T-${Date.now() + 1}`],
+          },
+        ],
+        createdAt: new Date().toISOString(),
+      }
     }
   }
 
@@ -90,21 +132,29 @@ export default function PlanPage() {
     saveMessages(newMessages)
     setIsLoading(true)
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      const plan = generateMockPlan(content)
+    try {
+      // Generate plan using Groq API
+      const plan = await generatePlanWithGroq(content)
+      
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         type: "assistant",
-        content: `I'll help you ${content.toLowerCase()}. Let me analyze your project and create a detailed plan.`,
+        content: plan.response || `I'll help you ${content.toLowerCase()}. Let me analyze your project and create a detailed plan.`,
         plan,
         timestamp: new Date().toISOString(),
       }
 
       const finalMessages = [...newMessages, assistantMessage]
       saveMessages(finalMessages)
+      
+      // Store the plan for the processes page
+      localStorage.setItem("currentPlan", JSON.stringify(plan))
+      
       setIsLoading(false)
-    }, 2000)
+    } catch (error) {
+      console.error('Error in handleSendMessage:', error)
+      setIsLoading(false)
+    }
   }
 
   const handleSuggestedPrompt = (prompt: string) => {
