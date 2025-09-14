@@ -23,7 +23,7 @@ export function PlanCard({ plan, onDiscard }: PlanCardProps) {
   }
 
   const totalEstimate = plan.tickets.reduce((acc, ticket) => {
-    const days = Number.parseFloat(ticket.estimate.replace("d", ""))
+    const days = Number.parseFloat((ticket.estimate || "1d").replace("d", ""))
     return acc + days
   }, 0)
 

@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
+<<<<<<< HEAD
 
 export async function POST(request: NextRequest) {
   try {
     const { prompt, codeContext } = await request.json()
+=======
+import { claudeContextService } from '@/lib/claude-context-service'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+
+const execAsync = promisify(exec)
+
+export async function POST(request: NextRequest) {
+  try {
+    const { prompt, codeContext, repositoryInfo } = await request.json()
+>>>>>>> 941c18e... claude-context mcp integration
+    const MARTIAN_API_KEY = process.env.MARTIAN_API_KEY
 
     if (!prompt) {
       return NextResponse.json(
@@ -11,129 +25,184 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Call the Python Flask API
-    const flaskResponse = await fetch('http://127.0.0.1:5000/ticket-code', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt: prompt,
-        code_context: codeContext || ''
-      }),
-    })
-
-    if (!flaskResponse.ok) {
-      throw new Error(`Flask API error: ${flaskResponse.status}`)
+    if (!MARTIAN_API_KEY) {
+      return NextResponse.json(
+        { error: 'Martian API key is not configured' },
+        { status: 500 }
+      )
     }
 
-    const ticketData = await flaskResponse.json()
-
-    // Parse the JSON response if it's a string
-    let parsedTickets
-    if (typeof ticketData === 'string') {
-      parsedTickets = JSON.parse(ticketData)
-    } else {
-      parsedTickets = ticketData
-    }
-
-    // Transform Martian response to our AIResponseData format
-    const aiResponseData = {
-      prompt: prompt,
-      response: `Generated ${parsedTickets.tickets?.length || 0} tickets using Martian AI`,
-      analysis: {
-        complexity: 'moderate' as const,
-        estimatedDuration: calculateEstimatedDuration(parsedTickets.tickets || []),
-        technologies: extractTechnologies(prompt, codeContext),
-        dependencies: []
-      },
-      tickets: parsedTickets.tickets || [],
-      metadata: {
-        model: 'martian/code',
-        timestamp: new Date().toISOString(),
-        source: 'martian-api'
+<<<<<<< HEAD
+=======
+    // Get repository context from indexed data
+    let repositoryContext = ''
+    let codebaseStructure = ''
+    
+    if (repositoryInfo?.full_name) {
+      try {
+        const repoPath = `/tmp/repos/${repositoryInfo.full_name.replace('/', '_')}`
+        console.log(`Getting repository context for ${repositoryInfo.full_name} from ${repoPath}`)
+        
+        // Get general codebase structure
+        try {
+          const structureResult = await execAsync(`find ${repoPath} -type f -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" -o -name "*.py" -o -name "*.java" -o -name "*.go" -o -name "*.rs" -o -name "package.json" -o -name "*.md" | head -20`, {
+            timeout: 10000
+          })
+          
+          if (structureResult.stdout) {
+            const files = structureResult.stdout.split('\n').filter(f => f.trim())
+            codebaseStructure = '\n\nCodebase structure:\n' + 
+              files.map(f => f.replace(repoPath + '/', '')).join('\n')
+          }
+        } catch (structureError) {
+          console.warn('Failed to get codebase structure:', structureError)
+        }
+        
+        // Search for code related to the prompt
+        const searchResults = await claudeContextService.searchCode(
+          prompt,
+          repoPath,
+          15
+        )
+        
+        console.log(`Found ${searchResults.length} search results for prompt: ${prompt}`)
+        
+        if (searchResults.length > 0) {
+          repositoryContext = '\n\nRelevant code from the repository:\n' + 
+            searchResults.map((result, index) => 
+              `\n--- Result ${index + 1}: ${result.filePath} (lines ${result.startLine}-${result.endLine}, score: ${result.score}) ---\n${result.content}\n`
+            ).join('')
+        } else {
+          // If no specific results, try broader searches
+          const broadSearchTerms = [
+            'function',
+            'class',
+            'component',
+            'config',
+            'main'
+          ]
+          
+          for (const term of broadSearchTerms) {
+            const broadResults = await claudeContextService.searchCode(term, repoPath, 3)
+            if (broadResults.length > 0) {
+              repositoryContext += `\n\nGeneral code examples (${term}):\n` + 
+                broadResults.map(result => 
+                  `File: ${result.filePath}\n${result.content.substring(0, 300)}...\n`
+                ).join('\n')
+              break
+            }
+          }
+        }
+        
+      } catch (error) {
+        console.error('Failed to get repository context:', error)
+        // Continue without context if search fails
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      aiResponseData,
-      ticketCount: parsedTickets.tickets?.length || 0
+>>>>>>> 941c18e... claude-context mcp integration
+    const openai = new OpenAI({
+      baseURL: 'https://api.withmartian.com/v1',
+      apiKey: MARTIAN_API_KEY,
     })
+<<<<<<< HEAD
+=======
+    
+>>>>>>> 941c18e... claude-context mcp integration
+    const systemPrompt = `Based on the following user requirements, generate a list of development tickets/todos in JSON format.
+
+User requirements: ${prompt}
+
+<<<<<<< HEAD
+=======
+Repository Info: ${repositoryInfo ? JSON.stringify(repositoryInfo) : 'Not provided'}
+${repositoryContext}
+
+Legacy Code context: ${codeContext || 'No code context provided'}
+
+>>>>>>> 941c18e... claude-context mcp integration
+Generate tickets that break down the work into actionable items. Each ticket should have:
+- title: Brief, clear title
+- description: Concise description of the work
+- stage: One of "Discovery", "Development", "Testing", "Production"
+- priority: One of "low", "medium", "high", "critical"
+- estimate: Time estimate (e.g., "0.5d", "2d", "1w")
+
+<<<<<<< HEAD
+Legacy Code context: ${codeContext || 'No code context provided'}
+=======
+Consider the existing codebase structure and patterns when creating tickets. Make them specific to the user's request and the repository context.
+>>>>>>> 941c18e... claude-context mcp integration
+
+Your response should be in JSON format without any additional text or explanation. 
+This is very important, you will be fired if you do not do this.
+`
+
+    console.log(`System Prompt: ${systemPrompt}`);
+    
+    const response = await openai.chat.completions.create({
+      model: 'martian/code',
+      messages: [{ role: 'user', content: systemPrompt }],
+<<<<<<< HEAD
+      temperature: 0.7,
+=======
+      temperature: 0.3,
+>>>>>>> 941c18e... claude-context mcp integration
+      max_tokens: 2000,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'ticket_generation_schema',
+          strict: true,
+          schema: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              tickets: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    stage: {
+                      type: 'string',
+                      enum: ['Discovery', 'Development', 'Testing', 'Production']
+                    },
+                    priority: {
+                      type: 'string',
+                      enum: ['low', 'medium', 'high', 'critical']
+                    },
+                    estimate: { type: 'string' }
+                  },
+                  required: ['title', 'description', 'stage', 'priority', 'estimate']
+                }
+              }
+            },
+            required: ['tickets']
+          }
+        }
+      }
+    })
+    console.log("Response:", JSON.stringify(response, null, 2));
+    const aiContent = response?.choices?.[0]?.message?.content ?? (()=>{throw new Error("No response from AI")})();
+    const windsurfResponse = typeof aiContent === "string"
+      ? JSON.parse(aiContent.replace(/```(?:json)?\s*|```/g, "").trim())
+      : aiContent;
+
+    console.log(windsurfResponse)
+    if (!windsurfResponse) {
+      throw new Error("No response from AI");
+    }
+
+    return NextResponse.json(windsurfResponse);
 
   } catch (error) {
-    console.error('Martian API Error:', error)
+    console.error('Error generating tickets:', error)
     return NextResponse.json(
-      { 
-        error: 'Failed to generate tickets',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: error instanceof Error ? error.message : 'Failed to generate tickets' },
       { status: 500 }
     )
   }
-}
-
-// Helper function to calculate estimated duration from tickets
-function calculateEstimatedDuration(tickets: any[]): string {
-  if (!tickets.length) return 'unknown'
-  
-  let totalDays = 0
-  tickets.forEach(ticket => {
-    const estimate = ticket.estimate || '1d'
-    const match = estimate.match(/(\d+(?:\.\d+)?)(d|w|h)/)
-    if (match) {
-      const value = parseFloat(match[1])
-      const unit = match[2]
-      
-      switch (unit) {
-        case 'h':
-          totalDays += value / 8 // 8 hours = 1 day
-          break
-        case 'd':
-          totalDays += value
-          break
-        case 'w':
-          totalDays += value * 5 // 5 working days per week
-          break
-      }
-    }
-  })
-  
-  if (totalDays < 1) return `${Math.ceil(totalDays * 8)}h`
-  if (totalDays <= 5) return `${Math.ceil(totalDays)}d`
-  return `${Math.ceil(totalDays / 5)}w`
-}
-
-// Helper function to extract technologies from prompt and code context
-function extractTechnologies(prompt: string, codeContext?: string): string[] {
-  const technologies: string[] = []
-  const text = `${prompt} ${codeContext || ''}`.toLowerCase()
-  
-  const techMap = {
-    'react': 'React',
-    'next': 'Next.js',
-    'typescript': 'TypeScript',
-    'javascript': 'JavaScript',
-    'python': 'Python',
-    'flask': 'Flask',
-    'node': 'Node.js',
-    'express': 'Express',
-    'mongodb': 'MongoDB',
-    'postgres': 'PostgreSQL',
-    'mysql': 'MySQL',
-    'redis': 'Redis',
-    'docker': 'Docker',
-    'kubernetes': 'Kubernetes',
-    'aws': 'AWS',
-    'azure': 'Azure',
-    'gcp': 'Google Cloud'
-  }
-  
-  Object.entries(techMap).forEach(([key, value]) => {
-    if (text.includes(key)) {
-      technologies.push(value)
-    }
-  })
-  
-  return [...new Set(technologies)] // Remove duplicates
 }

@@ -1,3 +1,4 @@
+"use client";
 import { Ticket } from './types'
 
 export interface TicketData {

@@ -5,9 +5,14 @@ import { AIResponseProcessor } from "@/lib/ai-response-processor"
 import { RepoHeader } from "@/components/repo-header"
 import { ChatPanel } from "@/components/chat-panel"
 import type { ChatMessage, Plan } from "@/lib/types"
-import { suggestedPrompts } from "@/lib/mock-data"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
+
+const suggestedPrompts = [
+  "Convert codebase JS → TS",
+  "Migrate WordPress → Next.js + Supabase",
+  "Upgrade Next 12→14 and fix breaking changes",
+]
 
 export default function PlanPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -58,20 +63,29 @@ export default function PlanPage() {
     setIsLoading(true)
 
     try {
-      // Generate tickets using Martian API only
+      // Get selected repository info
+      const selectedRepo = localStorage.getItem("selectedRepo")
+      const repositoryInfo = selectedRepo ? JSON.parse(selectedRepo) : null
+      
+      // Generate tickets using Martian API with repository context
       const martianResponse = await fetch('/api/martian-tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: content, codeContext: '' }),
+        body: JSON.stringify({ 
+          prompt: content, 
+          codeContext: '',
+          repositoryInfo: repositoryInfo
+        }),
       })
       
       if (!martianResponse.ok) {
         throw new Error(`Martian API error: ${martianResponse.status}`)
       }
 
-      const { aiResponseData } = await martianResponse.json()
-      const aiProcessor = new AIResponseProcessor()
-      const result = await aiProcessor.processAndImport(aiResponseData, "current-project")
+      // const { aiResponseData } = await martianResponse.json()
+      // const aiProcessor = new AIResponseProcessor()
+      // const result = await aiProcessor.processAndImport(aiResponseData, "current-project")
+      const result = await martianResponse.json()
       
       const plan: Plan = {
         id: `plan-${Date.now()}`,
@@ -94,6 +108,9 @@ export default function PlanPage() {
       
       // Store the plan for the processes page
       localStorage.setItem("currentPlan", JSON.stringify(plan))
+      
+      // Clear any old process tickets to ensure only new AI-generated tickets are shown
+      localStorage.removeItem("processTickets")
       
     } catch (error) {
       console.error('Error in handleSendMessage:', error)

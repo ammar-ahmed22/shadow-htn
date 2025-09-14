@@ -48,7 +48,7 @@ Legacy Code context: {code_context}
         response = oai_client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
+            temperature=0.3,
             max_tokens=2000,
             timeout=120,
             response_format={
