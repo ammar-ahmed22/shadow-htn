@@ -69,9 +69,10 @@ export default function PlanPage() {
         throw new Error(`Martian API error: ${martianResponse.status}`)
       }
 
-      const { aiResponseData } = await martianResponse.json()
-      const aiProcessor = new AIResponseProcessor()
-      const result = await aiProcessor.processAndImport(aiResponseData, "current-project")
+      // const { aiResponseData } = await martianResponse.json()
+      // const aiProcessor = new AIResponseProcessor()
+      // const result = await aiProcessor.processAndImport(aiResponseData, "current-project")
+      const result = await martianResponse.json()
       
       const plan: Plan = {
         id: `plan-${Date.now()}`,
