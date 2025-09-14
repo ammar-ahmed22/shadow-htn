@@ -1,5 +1,3 @@
-"use client"
-
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
@@ -64,23 +62,23 @@ export function TicketCard({ ticket, onClick, onDragStart, isDragging }: TicketC
       <h4 className="font-medium text-sm mb-3 line-clamp-2">{ticket.title}</h4>
 
       {/* Progress */}
-      {ticket.progress && (
-        <div className="space-y-2 mb-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Tests</span>
-            <span>
-              {ticket.progress.testsPassed}/{ticket.progress.testsTotal}
-            </span>
-          </div>
-          <Progress value={getProgressPercentage()} className="h-1" />
-          {hasErrors && (
-            <div className="flex items-center gap-1 text-xs text-destructive">
-              <AlertCircle className="w-3 h-3" />
-              <span>{ticket.progress.typeErrors} type errors</span>
-            </div>
-          )}
-        </div>
-      )}
+      {/* {ticket.progress && ( */}
+      {/*   <div className="space-y-2 mb-3"> */}
+      {/*     <div className="flex items-center justify-between text-xs"> */}
+      {/*       <span className="text-muted-foreground">Tests</span> */}
+      {/*       <span> */}
+      {/*         {ticket.progress.testsPassed}/{ticket.progress.testsTotal} */}
+      {/*       </span> */}
+      {/*     </div> */}
+      {/*     <Progress value={getProgressPercentage()} className="h-1" /> */}
+      {/*     {hasErrors && ( */}
+      {/*       <div className="flex items-center gap-1 text-xs text-destructive"> */}
+      {/*         <AlertCircle className="w-3 h-3" /> */}
+      {/*         <span>{ticket.progress.typeErrors} type errors</span> */}
+      {/*       </div> */}
+      {/*     )} */}
+      {/*   </div> */}
+      {/* )} */}
 
       {/* Footer */}
       <div className="flex items-center justify-between">
