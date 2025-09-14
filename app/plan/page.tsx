@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AIResponseProcessor } from "@/lib/ai-response-processor"
+// import { AIResponseProcessor } from "@/lib/ai-response-processor"
 import { RepoHeader } from "@/components/repo-header"
 import { ChatPanel } from "@/components/chat-panel"
-import type { ChatMessage, Plan } from "@/lib/types"
+import type { ChatMessage, Plan, Repository } from "@/lib/types"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 
@@ -65,36 +65,43 @@ export default function PlanPage() {
     try {
       // Get selected repository info
       const selectedRepo = localStorage.getItem("selectedRepo")
-      const repositoryInfo = selectedRepo ? JSON.parse(selectedRepo) : null
-      
+      const repositoryInfo = selectedRepo ? JSON.parse(selectedRepo) as Repository : null
+      if (!repositoryInfo) {
+        throw new Error("No repository selected")
+      }
+
+
       // Generate tickets using Martian API with repository context
       const martianResponse = await fetch('/api/martian-tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt: content, 
-          codeContext: '',
-          repositoryInfo: repositoryInfo
+        body: JSON.stringify({
+          prompt: content,
+          owner: repositoryInfo.owner.login,
+          repo: repositoryInfo.name,
         }),
       })
-      
+
       if (!martianResponse.ok) {
         throw new Error(`Martian API error: ${martianResponse.status}`)
       }
 
-      // const { aiResponseData } = await martianResponse.json()
-      // const aiProcessor = new AIResponseProcessor()
-      // const result = await aiProcessor.processAndImport(aiResponseData, "current-project")
       const result = await martianResponse.json()
-      
+
+      const tickets = result.tickets.map((ticket: any, index: number) => ({
+        id: `SHDW-${index}`,
+        ...ticket,
+      }))
+
       const plan: Plan = {
         id: `plan-${Date.now()}`,
         summary: result.summary,
         stages: ["Discovery", "Development", "Testing", "Production"],
-        tickets: result.tickets,
+        tickets,
+        initialPrompt: content,
         createdAt: new Date().toISOString(),
       }
-      
+
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         type: "assistant",
@@ -105,13 +112,13 @@ export default function PlanPage() {
 
       const finalMessages = [...newMessages, assistantMessage]
       saveMessages(finalMessages)
-      
+
       // Store the plan for the processes page
       localStorage.setItem("currentPlan", JSON.stringify(plan))
-      
+
       // Clear any old process tickets to ensure only new AI-generated tickets are shown
       localStorage.removeItem("processTickets")
-      
+
     } catch (error) {
       console.error('Error in handleSendMessage:', error)
     } finally {

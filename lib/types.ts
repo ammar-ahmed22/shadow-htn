@@ -4,6 +4,7 @@ export interface Plan {
   complexity?: "simple" | "moderate" | "complex"
   estimatedDuration?: string
   summary: string
+  initialPrompt: string
   stages: string[]
   tickets: Ticket[]
   createdAt: string
@@ -77,6 +78,7 @@ export interface Ticket {
   priority?: "high" | "medium" | "low"
   tags?: string[]
   activity?: ActivityItem[]
+  agentStarted?: boolean,
 }
 
 export interface ActivityItem {

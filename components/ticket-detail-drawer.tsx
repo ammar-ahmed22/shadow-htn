@@ -1,25 +1,17 @@
-"use client"
-
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
-  X,
-  ExternalLink,
-  GitBranch,
   CheckCircle2,
   XCircle,
-  RotateCcw,
   Play,
-  AlertCircle,
   Clock,
   GitPullRequest,
   FileText,
 } from "lucide-react"
-import type { Ticket } from "@/lib/types"
+import type { Plan, Repository, Ticket } from "@/lib/types"
 
 interface TicketDetailDrawerProps {
   ticket: Ticket
@@ -68,8 +60,43 @@ export function TicketDetailDrawer({ ticket, onClose, onUpdate }: TicketDetailDr
     }
   }
 
-  const handleApprove = () => {
-    onUpdate({ status: "done" })
+  const handleGetStarted = async () => {
+    onUpdate({ status: "in_progress", agentStarted: true })
+    // Make API call to trigger lambda function to start the codegen process
+    const currentPlan = localStorage.getItem("currentPlan")
+    const plan = currentPlan ? JSON.parse(currentPlan) as Plan : null
+    if (!plan) {
+      console.error("No current plan found")
+      return
+    }
+    const selectedRepo = localStorage.getItem("selectedRepo")
+    const repo = selectedRepo ? JSON.parse(selectedRepo) as Repository : null
+    if (!repo) {
+      console.error("No repository selected")
+      return
+    }
+
+    const prompt = `You are tasked with the following project: ${plan.initialPrompt}\n\nYour current task is: ${ticket.title}\n\nHere are the details: ${ticket.description}`
+    const request = {
+      owner: repo.owner.login,
+      repo: repo.name,
+      prompt,
+      base: "main",
+      head: `${ticket.id.toLowerCase()}/${ticket.title?.toLowerCase().replace(/\s+/g, "-")}`,
+      new_branch: true,
+    }
+    const response = await fetch('/api/lambda', {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    })
+    const data = await response.json()
+    console.log("Lambda response:", data)
+    onUpdate({ prUrl: data.pr_url, agentStarted: false, status: "review" })
+    // Show some type of progress indicator (loading pulse whatever)
+    // Once done, update the ticket status to "review"
   }
 
   const handleRequestChanges = () => {
@@ -101,9 +128,6 @@ export function TicketDetailDrawer({ ticket, onClose, onUpdate }: TicketDetailDr
               </div>
               <SheetTitle className="text-left">{ticket.title}</SheetTitle>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="shadow-focus">
-              <X className="w-4 h-4" />
-            </Button>
           </div>
 
           <div className="flex items-center gap-4 text-sm">
@@ -120,7 +144,7 @@ export function TicketDetailDrawer({ ticket, onClose, onUpdate }: TicketDetailDr
           </div>
         </SheetHeader>
 
-        <div className="space-y-6 mt-6">
+        <div className="space-y-6 mt-6 p-4">
           {/* Dependencies */}
           {ticket.deps && ticket.deps.length > 0 && (
             <div>
@@ -144,63 +168,60 @@ export function TicketDetailDrawer({ ticket, onClose, onUpdate }: TicketDetailDr
           )}
 
           {/* Progress */}
-          {ticket.progress && (
-            <div>
-              <h4 className="font-medium mb-3">Progress</h4>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Tests</span>
-                  <span>
-                    {ticket.progress.testsPassed}/{ticket.progress.testsTotal}
-                  </span>
-                </div>
-                <Progress value={getProgressPercentage()} className="h-2" />
-                {hasErrors && (
-                  <div className="flex items-center gap-2 text-sm text-destructive">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>{ticket.progress.typeErrors} type errors remaining</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {/* {ticket.progress && ( */}
+          {/*   <div> */}
+          {/*     <h4 className="font-medium mb-3">Progress</h4> */}
+          {/*     <div className="space-y-3"> */}
+          {/*       <div className="flex items-center justify-between text-sm"> */}
+          {/*         <span className="text-muted-foreground">Tests</span> */}
+          {/*         <span> */}
+          {/*           {ticket.progress.testsPassed}/{ticket.progress.testsTotal} */}
+          {/*         </span> */}
+          {/*       </div> */}
+          {/*       <Progress value={getProgressPercentage()} className="h-2" /> */}
+          {/*       {hasErrors && ( */}
+          {/*         <div className="flex items-center gap-2 text-sm text-destructive"> */}
+          {/*           <AlertCircle className="w-4 h-4" /> */}
+          {/*           <span>{ticket.progress.typeErrors} type errors remaining</span> */}
+          {/*         </div> */}
+          {/*       )} */}
+          {/*     </div> */}
+          {/*   </div> */}
+          {/* )} */}
 
-          <Separator />
 
           {/* Links */}
-          <div>
-            <h4 className="font-medium mb-3">Links</h4>
-            <div className="space-y-2">
-              {ticket.prUrl && (
-                <a
-                  href={ticket.prUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground shadow-transition"
-                >
-                  <GitPullRequest className="w-4 h-4" />
-                  <span>Pull Request</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-              {ticket.branch && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <GitBranch className="w-4 h-4" />
-                  <span>{ticket.branch}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <FileText className="w-4 h-4" />
-                <span>Run logs</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <FileText className="w-4 h-4" />
-                <span>Artifacts</span>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
+          {/* <div> */}
+          {/*   <h4 className="font-medium mb-3">Links</h4> */}
+          {/*   <div className="space-y-2"> */}
+          {/*     {ticket.prUrl && ( */}
+          {/*       <a */}
+          {/*         href={ticket.prUrl} */}
+          {/*         target="_blank" */}
+          {/*         rel="noopener noreferrer" */}
+          {/*         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground shadow-transition" */}
+          {/*       > */}
+          {/*         <GitPullRequest className="w-4 h-4" /> */}
+          {/*         <span>Pull Request</span> */}
+          {/*         <ExternalLink className="w-3 h-3" /> */}
+          {/*       </a> */}
+          {/*     )} */}
+          {/*     {ticket.branch && ( */}
+          {/*       <div className="flex items-center gap-2 text-sm text-muted-foreground"> */}
+          {/*         <GitBranch className="w-4 h-4" /> */}
+          {/*         <span>{ticket.branch}</span> */}
+          {/*       </div> */}
+          {/*     )} */}
+          {/*     <div className="flex items-center gap-2 text-sm text-muted-foreground"> */}
+          {/*       <FileText className="w-4 h-4" /> */}
+          {/*       <span>Run logs</span> */}
+          {/*     </div> */}
+          {/*     <div className="flex items-center gap-2 text-sm text-muted-foreground"> */}
+          {/*       <FileText className="w-4 h-4" /> */}
+          {/*       <span>Artifacts</span> */}
+          {/*     </div> */}
+          {/*   </div> */}
+          {/* </div> */}
 
           {/* Activity Timeline */}
           {ticket.activity && ticket.activity.length > 0 && (
@@ -227,29 +248,35 @@ export function TicketDetailDrawer({ ticket, onClose, onUpdate }: TicketDetailDr
           <Separator />
 
           {/* Actions */}
-          <div className="space-y-3">
-            <h4 className="font-medium">Actions</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <Button onClick={handleApprove} className="shadow-focus">
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Approve
-              </Button>
-              <Button variant="outline" onClick={handleRequestChanges} className="shadow-focus bg-transparent">
-                <XCircle className="w-4 h-4 mr-2" />
-                Request Changes
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={handleRerun} className="shadow-focus bg-transparent">
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Re-run
-              </Button>
-              <Button variant="outline" onClick={handleRollback} disabled className="shadow-focus bg-transparent">
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Rollback
-              </Button>
-            </div>
-          </div>
+          {ticket.status === "todo" && (
+            <Button onClick={handleGetStarted} className="shadow-focus w-full">
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Get Started
+            </Button>
+          )}
+          {/* <div className="space-y-3"> */}
+          {/*   <h4 className="font-medium">Actions</h4> */}
+          {/*   <div className="grid grid-cols-2 gap-3"> */}
+          {/*     <Button onClick={handleApprove} className="shadow-focus"> */}
+          {/*       <CheckCircle2 className="w-4 h-4 mr-2" /> */}
+          {/*       Approve */}
+          {/*     </Button> */}
+          {/*     <Button variant="outline" onClick={handleRequestChanges} className="shadow-focus bg-transparent"> */}
+          {/*       <XCircle className="w-4 h-4 mr-2" /> */}
+          {/*       Request Changes */}
+          {/*     </Button> */}
+          {/*   </div> */}
+          {/*   <div className="grid grid-cols-2 gap-3"> */}
+          {/*     <Button variant="outline" onClick={handleRerun} className="shadow-focus bg-transparent"> */}
+          {/*       <RotateCcw className="w-4 h-4 mr-2" /> */}
+          {/*       Re-run */}
+          {/*     </Button> */}
+          {/*     <Button variant="outline" onClick={handleRollback} disabled className="shadow-focus bg-transparent"> */}
+          {/*       <RotateCcw className="w-4 h-4 mr-2" /> */}
+          {/*       Rollback */}
+          {/*     </Button> */}
+          {/*   </div> */}
+          {/* </div> */}
 
           {/* Assignee */}
           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
