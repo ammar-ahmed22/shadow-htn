@@ -65,9 +65,39 @@ export default function RepoPickerPage() {
     repo.full_name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleSelectRepo = (repo: Repository) => {
-    localStorage.setItem("selectedRepo", JSON.stringify(repo))
-    router.push("/plan")
+  const handleSelectRepo = async (repo: Repository) => {
+    try {
+      // Store the selected repository
+      localStorage.setItem("selectedRepo", JSON.stringify(repo))
+      
+      // Start indexing the repository in the background
+      const repoPath = `/tmp/repos/${repo.full_name.replace('/', '_')}`
+      
+      const response = await fetch('/api/index-repo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          repo,
+          repoPath
+        })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Repository indexing started:', result.message)
+      } else {
+        console.error('Failed to start repository indexing')
+      }
+      
+      // Navigate to the plan page
+      router.push("/plan")
+    } catch (error) {
+      console.error('Error selecting repository:', error)
+      // Still navigate even if indexing fails
+      router.push("/plan")
+    }
   }
 
   const formatDate = (dateString: string) => {

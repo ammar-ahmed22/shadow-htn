@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { KanbanBoard } from "@/components/kanban-board"
+import { Button } from "@/components/ui/button"
+import { RefreshCw } from "lucide-react"
 import type { Ticket } from "@/lib/types"
-import { mockTickets } from "@/lib/mock-tickets"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 
@@ -28,14 +29,11 @@ export default function ProcessesPage() {
   }, [isAuthenticated, mounted, router])
 
   useEffect(() => {
-    // Load tickets from localStorage or convert from current plan
-    const storedTickets = localStorage.getItem("processTickets")
+    // Load tickets from current plan (AI-generated tickets)
     const currentPlan = localStorage.getItem("currentPlan")
     const selectedRepo = localStorage.getItem("selectedRepo")
 
-    if (storedTickets) {
-      setTickets(JSON.parse(storedTickets))
-    } else if (currentPlan) {
+    if (currentPlan) {
       // Convert plan tickets to process tickets
       const plan = JSON.parse(currentPlan)
       let repoName = "unknown/repo"
@@ -67,6 +65,8 @@ export default function ProcessesPage() {
     } else {
       // No plan available, show empty state
       setTickets([])
+      // Clear any old demo data
+      localStorage.removeItem("processTickets")
     }
   }, [])
 
@@ -78,6 +78,45 @@ export default function ProcessesPage() {
     localStorage.setItem("processTickets", JSON.stringify(updatedTickets))
   }
 
+  const refreshTickets = () => {
+    // Force refresh from current plan
+    const currentPlan = localStorage.getItem("currentPlan")
+    const selectedRepo = localStorage.getItem("selectedRepo")
+
+    if (currentPlan) {
+      const plan = JSON.parse(currentPlan)
+      let repoName = "unknown/repo"
+      
+      if (selectedRepo) {
+        const repo = JSON.parse(selectedRepo)
+        repoName = repo.full_name || repo.fullName || repoName
+      }
+
+      const processTickets: Ticket[] = plan.tickets.map((planTicket: any, index: number) => ({
+        id: planTicket.id,
+        title: planTicket.title,
+        stage: planTicket.stage || ["Discovery", "Development", "Testing", "Production"][Math.min(index, 3)] as Ticket['stage'],
+        status: "todo" as const,
+        assignee: "Shadow",
+        repo: repoName,
+        updatedAt: "just now",
+        description: planTicket.description || `Generated from plan: ${planTicket.title}`,
+        deps: planTicket.dependencies || planTicket.deps || [],
+        progress: {
+          testsPassed: 0,
+          testsTotal: 0,
+          typeErrors: 0,
+        }
+      }))
+      
+      setTickets(processTickets)
+      localStorage.setItem("processTickets", JSON.stringify(processTickets))
+    } else {
+      setTickets([])
+      localStorage.removeItem("processTickets")
+    }
+  }
+
   if (!mounted) {
     return null
   }
@@ -85,7 +124,18 @@ export default function ProcessesPage() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-2">Processes</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-semibold">Processes</h1>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={refreshTickets}
+            className="shadow-focus"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
         <p className="text-muted-foreground">Track and manage your development tickets</p>
         {tickets.length === 0 && (
           <div className="mt-4 p-4 bg-muted/50 rounded-lg">

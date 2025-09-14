@@ -76,7 +76,11 @@ shadow-app/
 ├── lib/                  # Utilities and configurations
 │   ├── auth.ts          # Authentication logic
 │   ├── types.ts         # TypeScript definitions
+<<<<<<< HEAD
 │   └── mock-data.ts     # Development data
+=======
+│   └── claude-context-service.ts # Repository indexing and search
+>>>>>>> 941c18e... claude-context mcp integration
 └── styles/              # Global styles
 ```
 

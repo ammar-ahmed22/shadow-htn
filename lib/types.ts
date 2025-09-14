@@ -16,6 +16,14 @@ export interface PlanTicket {
   deps?: string[]
 }
 
+export interface ChatTab {
+  id: string
+  title: string
+  messages: ChatMessage[]
+  repoId?: string
+  createdAt?: string
+}
+
 export interface ChatMessage {
   id: string
   type: "user" | "assistant"

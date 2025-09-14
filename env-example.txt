@@ -16,3 +16,17 @@ GROQ_API_KEY=your_groq_api_key_here
 
 # Optional: Database URL (for future features)
 # DATABASE_URL=your_database_url_here
+
+# Claude Context MCP Server Configuration
+# Get your API key from: https://platform.openai.com/api-keys
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Zilliz Cloud Configuration (for vector database)
+# Get your token from: https://cloud.zilliz.com/
+MILVUS_TOKEN=your_zilliz_cloud_token_here
+MILVUS_ADDRESS=your_zilliz_cloud_endpoint_here
+
+# Claude Context MCP Server Settings
+EMBEDDING_PROVIDER=OpenAI
+EMBEDDING_MODEL=text-embedding-3-small
+MCP_SERVER_PORT=3001
